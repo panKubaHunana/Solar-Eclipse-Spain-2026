@@ -39,7 +39,6 @@ body {
     radial-gradient(circle at 18% 12%, rgba(255,255,255,0.35), transparent 45%),
     radial-gradient(circle at 82% 78%, rgba(120,90,50,0.14), transparent 55%),
     url("../assets/paper.svg");
-  background-attachment: fixed;
   background-size: cover, cover, 340px 340px;
   -webkit-font-smoothing: antialiased;
   line-height: 1.5;
@@ -61,8 +60,14 @@ body {
   box-shadow: 0 0 60px rgba(60,45,20,0.25);
 }
 #app::before {
+  /* position: fixed (ne absolute) záměrně — element musí zůstat vysoký
+     jen jako viewport, ne jako celý (dlouhý) dokument. Na iOS Safari
+     způsobovala kombinace mix-blend-mode + absolutně umístěná vrstva
+     přes celou výšku dlouhé stránky (např. Itinerář) pád vykreslovacího
+     procesu při scrollování — bitmapa k prolnutí musela pokrývat celý
+     dokument místo jen obrazovky. */
   content: "";
-  position: absolute;
+  position: fixed;
   inset: 0;
   pointer-events: none;
   background-image: url("../assets/paper.svg");
