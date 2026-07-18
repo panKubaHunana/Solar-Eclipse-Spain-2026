@@ -132,12 +132,15 @@ const ROUTES = {
   "": { view: "home", tab: "home" },
   "denik": { view: "denik", tab: "denik" },
   "fotky": { view: "fotky", tab: "fotky" },
+  "itinerar": { view: "itinerar", tab: "plan" },
   "plan": { view: "plan", tab: "plan" },
   "plan/fakta": { view: "fakta", tab: "plan" },
   "plan/doprava": { view: "doprava", tab: "plan" },
   "plan/rozpocet": { view: "rozpocet", tab: "plan" },
   "plan/trasa": { view: "trasa", tab: "plan" },
   "plan/mapa": { view: "mapa", tab: "plan" },
+  "plan/checklist": { view: "checklist", tab: "plan" },
+  "plan/info": { view: "info", tab: "plan" },
   "zatmeni": { view: "zatmeni", tab: "zatmeni" }
 };
 

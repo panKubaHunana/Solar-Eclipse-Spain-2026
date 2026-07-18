@@ -11,8 +11,8 @@ window.ECLIPSE_DATA = {
       id: "soria",
       name: "SORIA",
       primary: true,
-      coords: "41,7637° N, 2,8147° Z",
-      lat: 41.7637, lon: -2.8147,
+      coords: "41,7757° N, 2,5873° Z — bod C (~9 km Z od Sorie)",
+      lat: 41.7757, lon: -2.5873,
       maxPhase: "1 min 41,2 s",
       phases: [
         { label: "Začátek částečného zatmění", time: "19:34:28", alt: "+17,3°" },

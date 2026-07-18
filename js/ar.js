@@ -9,7 +9,7 @@
   const HFOV = 62;                 // odhad horizontálního zorného úhlu kamery (°)
   const shortest = (a) => ((((a % 360) + 540) % 360) - 180); // -180..180
 
-  let root, video, marker, arrow, readout, altInfo, stream, rafId;
+  let root, video, grid, gctx, marker, arrow, readout, altInfo, stream, rafId;
   let orient = null;               // {heading, pitch}
   let headingOffset = 0;           // ruční kalibrace
   let target = null;               // {az, alt, label}
@@ -126,6 +126,52 @@
     rafId = requestAnimationFrame(loop);
   }
 
+  const COMPASS = { 0: "S", 45: "SV", 90: "V", 135: "JV", 180: "J", 225: "JZ", 270: "Z", 315: "SZ" };
+
+  function drawGrid(w, hgt, pxPerDeg) {
+    const dpr = window.devicePixelRatio || 1;
+    if (grid.width !== Math.round(w * dpr)) { grid.width = Math.round(w * dpr); grid.height = Math.round(hgt * dpr); }
+    gctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    gctx.clearRect(0, 0, w, hgt);
+    gctx.font = "12px system-ui, sans-serif";
+    gctx.lineWidth = 1;
+
+    const heading = orient.heading + headingOffset;
+
+    // výškové kružnice (vodorovné čáry)
+    for (let alt = -10; alt <= 70; alt += 10) {
+      const y = hgt / 2 - (alt - orient.pitch) * pxPerDeg;
+      if (y < 20 || y > hgt - 20) continue;
+      const horizon = alt === 0;
+      gctx.strokeStyle = horizon ? "rgba(255,214,107,0.85)" : "rgba(255,255,255,0.28)";
+      gctx.lineWidth = horizon ? 2 : 1;
+      gctx.beginPath(); gctx.moveTo(0, y); gctx.lineTo(w, y); gctx.stroke();
+      gctx.fillStyle = horizon ? "rgba(255,214,107,0.95)" : "rgba(255,255,255,0.7)";
+      gctx.fillText(horizon ? "obzor 0°" : (alt > 0 ? "+" : "") + alt + "°", 8, y - 4);
+    }
+
+    // azimutové čáry (svislé), po 10°
+    for (let a = 0; a < 360; a += 10) {
+      const dx = shortest(a - heading);
+      if (Math.abs(dx) > HFOV / 2 + 6) continue;
+      const x = w / 2 + dx * pxPerDeg;
+      const major = a % 90 === 0;
+      gctx.strokeStyle = major ? "rgba(255,214,107,0.5)" : "rgba(255,255,255,0.18)";
+      gctx.lineWidth = major ? 1.5 : 1;
+      gctx.beginPath(); gctx.moveTo(x, 26); gctx.lineTo(x, hgt); gctx.stroke();
+      gctx.fillStyle = "rgba(255,255,255,0.8)";
+      gctx.textAlign = "center";
+      gctx.fillText(a + "°", x, 20);
+      if (COMPASS[a]) {
+        gctx.fillStyle = a % 90 === 0 ? "rgba(255,214,107,0.95)" : "rgba(255,255,255,0.85)";
+        gctx.font = "bold 15px system-ui, sans-serif";
+        gctx.fillText(COMPASS[a], x, hgt / 2 + 5);
+        gctx.font = "12px system-ui, sans-serif";
+      }
+      gctx.textAlign = "left";
+    }
+  }
+
   function draw() {
     if (!target) return;
     const w = root.clientWidth, hgt = root.clientHeight;
@@ -134,7 +180,13 @@
       Math.round(target.az) + "° " + window.Sun.compassName(target.az);
     readout.querySelector(".r-alt").textContent = target.alt.toFixed(1) + "°";
 
-    if (!orient) { marker.style.opacity = 0; arrow.style.display = "none"; return; }
+    if (!orient) {
+      marker.style.opacity = 0; arrow.style.display = "none";
+      if (grid.width) gctx.clearRect(0, 0, grid.width, grid.height);
+      return;
+    }
+
+    drawGrid(w, hgt, pxPerDeg);
 
     const dAz = shortest(target.az - (orient.heading + headingOffset));
     const dAlt = target.alt - orient.pitch;
@@ -144,6 +196,8 @@
     const onScreen = x > 20 && x < w - 20 && y > 60 && y < hgt - 120;
     marker.style.opacity = onScreen ? 1 : 0.25;
     marker.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+    marker.querySelector(".ar-sun-lbl").textContent =
+      "výška " + target.alt.toFixed(1) + "° · " + Math.round(target.az) + "°";
 
     // navigační šipka, když je cíl mimo obraz
     if (!onScreen) {
@@ -171,9 +225,10 @@
     const scrim = h("div", "ar-scrim");
     root.appendChild(scrim);
 
-    // horizont + výškové rysky
-    const horizon = h("div", "ar-horizon");
-    root.appendChild(horizon);
+    // azimutová / výšková mřížka (kreslí se na canvas)
+    grid = h("canvas", "ar-grid");
+    root.appendChild(grid);
+    gctx = grid.getContext("2d");
 
     marker = h("div", "ar-sun", '<div class="ar-sun-ring"></div><div class="ar-sun-lbl"></div>');
     root.appendChild(marker);

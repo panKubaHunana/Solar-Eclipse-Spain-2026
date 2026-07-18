@@ -498,8 +498,9 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--gold-2); ou
   animation: sunpulse 2.4s ease-in-out infinite;
 }
 @keyframes sunpulse { 50% { box-shadow: 0 0 34px 12px rgba(255,196,64,0.9), inset 0 0 18px rgba(255,196,64,0.6); } }
-.ar-sun-lbl { color: #ffd66b; font-size: 12px; font-weight: 700; margin-top: 4px; text-shadow: 0 1px 4px #000; }
-.ar-sun-lbl::before { content: "☀ Slunce"; }
+.ar-grid { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.ar-sun-lbl { color: #ffd66b; font-size: 12px; font-weight: 700; margin-top: 4px; text-shadow: 0 1px 4px #000; white-space: nowrap; }
+.ar-sun-lbl::before { content: "☀ Slunce · "; }
 
 .ar-arrow {
   position: absolute; left: 50%; bottom: 210px; transform: translateX(-50%);
@@ -549,6 +550,62 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--gold-2); ou
 .ar-note { font-size: 11.5px; opacity: 0.8; line-height: 1.5; }
 .ar-fallback { display: none; font-size: 11.5px; color: #ffd66b; line-height: 1.5; margin-top: 6px; }
 .ar-root.nocam .ar-fallback, .ar-root.noorient .ar-fallback { display: block; }
+
+/* ---- Reservations ------------------------------------------------ */
+.res { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; border-bottom: 1px dashed var(--line); }
+.res:last-of-type { border-bottom: none; }
+.res .ic { font-size: 22px; }
+.res b { font-size: 14px; }
+.res .d { font-size: 12.5px; color: var(--ink-2); }
+
+/* ---- Itinerary --------------------------------------------------- */
+.day-card {
+  background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--radius);
+  margin-bottom: 12px; overflow: hidden; box-shadow: var(--shadow);
+}
+.day-card.eclipse { border-color: var(--terra); box-shadow: 0 0 0 2px rgba(178,58,46,0.14), var(--shadow); }
+.day-head {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  background: none; border: none; cursor: pointer; padding: 14px; text-align: left; color: var(--ink);
+}
+.day-n {
+  flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%;
+  background: var(--ink); color: var(--paper-2); display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 16px;
+}
+.day-card.eclipse .day-n { background: var(--terra); }
+.day-info { flex: 1; min-width: 0; }
+.day-date { font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
+.day-title { font-weight: 700; font-size: 14.5px; margin-top: 1px; }
+.day-head .chev { transition: transform 0.2s; color: var(--ink-3); }
+.day-head.open .chev { transform: rotate(180deg); }
+.day-body { display: none; padding: 0 14px 12px; }
+.day-body.open { display: block; }
+.it {
+  display: grid; grid-template-columns: auto 52px 1fr; align-items: start; gap: 8px;
+  padding: 8px 0; border-top: 1px dashed var(--line); font-size: 13.5px;
+}
+.it input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--gold); }
+.it-t { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); }
+.it-a { color: var(--ink); line-height: 1.4; }
+.it.hi .it-t, .it.hi .it-a { color: var(--terra); font-weight: 600; }
+.it input:checked ~ .it-a { text-decoration: line-through; color: var(--ink-3); }
+
+/* ---- Checklist --------------------------------------------------- */
+.chk { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px dashed var(--line); font-size: 14.5px; cursor: pointer; }
+.chk:last-child { border-bottom: none; }
+.chk input { width: 20px; height: 20px; accent-color: var(--gold); flex: 0 0 auto; }
+.chk input:checked ~ span { text-decoration: line-through; color: var(--ink-3); }
+
+/* ---- Info -------------------------------------------------------- */
+.info-list { margin: 4px 0 0; padding-left: 18px; }
+.info-list li { font-size: 13.5px; line-height: 1.5; margin-bottom: 7px; color: var(--ink); }
+.kv { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px dashed var(--line); font-size: 13.5px; }
+.kv:last-child { border-bottom: none; }
+.kv b { flex: 0 0 92px; color: var(--ink); }
+.kv span { color: var(--ink-2); }
+.linkrow { display: block; padding: 10px 0; border-bottom: 1px dashed var(--line); color: var(--gold); text-decoration: none; font-weight: 600; font-size: 14px; }
+.linkrow:last-child { border-bottom: none; }
 
 /* ---- Toast ------------------------------------------------------- */
 .toast {

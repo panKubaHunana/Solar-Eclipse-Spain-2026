@@ -64,12 +64,12 @@ Views.home = async function (el) {
     ${UI.rule()}
 
     <div class="tiles">
+      <a class="tile" href="#/itinerar"><span class="ic">📅</span><span class="t">Itinerář</span><span class="d">7 dní hodinu po hodině</span></a>
       <a class="tile" href="#/denik"><span class="ic">📖</span><span class="t">Deník</span><span class="d">Naše společné zápisky</span></a>
       <a class="tile" href="#/fotky"><span class="ic">📸</span><span class="t">Fotky</span><span class="d">Vzpomínkové album</span></a>
       <a class="tile" href="#/zatmeni"><span class="ic">🌒</span><span class="t">Zatmění</span><span class="d">Časy, počasí, AR hledáček</span></a>
       <a class="tile" href="#/plan/mapa"><span class="ic">🗺️</span><span class="t">Mapa cesty</span><span class="d">Naše trasa Španělskem</span></a>
-      <a class="tile" href="#/plan/trasa"><span class="ic">🧭</span><span class="t">Trasa</span><span class="d">Den po dni</span></a>
-      <a class="tile" href="#/plan"><span class="ic">📋</span><span class="t">Plán & rozpočet</span><span class="d">Fakta, doprava, peníze</span></a>
+      <a class="tile" href="#/plan"><span class="ic">📋</span><span class="t">Plán & vše ostatní</span><span class="d">Checklist, rozpočet, info</span></a>
     </div>
 
     ${UI.quote("Sbaleno a připraveno na vše, co přinese zítřek.")}
@@ -244,12 +244,14 @@ Views.plan = async function (el) {
     <div class="page-title">Plán cesty</div>
     <div class="page-sub">Vše na jednom místě</div>
     <div class="tiles">
-      <a class="tile" href="#/plan/fakta"><span class="ic">📌</span><span class="t">Základní fakta</span><span class="d">Mise, obavy, co nesmíme minout</span></a>
-      <a class="tile" href="#/plan/doprava"><span class="ic">🚗</span><span class="t">Doprava & ubytování</span><span class="d">Přílet, odlet, kde spíme</span></a>
-      <a class="tile" href="#/plan/rozpocet"><span class="ic">💰</span><span class="t">Rozpočet</span><span class="d">Odhad vs. skutečnost</span></a>
-      <a class="tile" href="#/plan/trasa"><span class="ic">🧭</span><span class="t">Trasa</span><span class="d">Den · odkud–kam · km</span></a>
+      <a class="tile" href="#/itinerar"><span class="ic">📅</span><span class="t">Itinerář</span><span class="d">7 dní hodinu po hodině</span></a>
+      <a class="tile" href="#/plan/checklist"><span class="ic">🎒</span><span class="t">Checklist</span><span class="d">Seznam zavazadel k odškrtání</span></a>
       <a class="tile" href="#/plan/mapa"><span class="ic">🗺️</span><span class="t">Mapa naší cesty</span><span class="d">Města a kilometry</span></a>
-      <a class="tile" href="#/zatmeni"><span class="ic">🌒</span><span class="t">Zatmění</span><span class="d">Časy a AR hledáček Slunce</span></a>
+      <a class="tile" href="#/plan/trasa"><span class="ic">🧭</span><span class="t">Trasa</span><span class="d">Den · odkud–kam · km</span></a>
+      <a class="tile" href="#/plan/rozpocet"><span class="ic">💰</span><span class="t">Rozpočet</span><span class="d">Odhad vs. skutečnost</span></a>
+      <a class="tile" href="#/plan/doprava"><span class="ic">🚗</span><span class="t">Doprava & ubytování</span><span class="d">Lety, auto, kde spíme</span></a>
+      <a class="tile" href="#/plan/fakta"><span class="ic">📌</span><span class="t">Základní fakta</span><span class="d">Mise, obavy, co nesmíme minout</span></a>
+      <a class="tile" href="#/plan/info"><span class="ic">ℹ️</span><span class="t">Info & bezpečnost</span><span class="d">Tísňová čísla, foto plán, aplikace</span></a>
     </div>
     ${UI.quote("Dobrodružství začíná tam, kde končí tvá komfortní zóna.")}
   `;
@@ -272,7 +274,7 @@ function bindDocForm(el, docName, hintSel) {
 //  ZÁKLADNÍ FAKTA
 // =====================================================================
 Views.fakta = async function (el) {
-  const d = await Store.getDoc("basics");
+  const d = Object.assign({}, window.TRIP.facts, await Store.getDoc("basics"));
   el.innerHTML = `
     <a class="back" href="#/plan">← Plán</a>
     <div class="page-title">Základní fakta</div>
@@ -302,7 +304,7 @@ Views.fakta = async function (el) {
 //  DOPRAVA & UBYTOVÁNÍ
 // =====================================================================
 Views.doprava = async function (el) {
-  const d = await Store.getDoc("travelDetails");
+  const d = Object.assign({}, window.TRIP.transport, await Store.getDoc("travelDetails"));
   el.innerHTML = `
     <a class="back" href="#/plan">← Plán</a>
     <div class="page-title">Doprava & ubytování</div>
@@ -333,15 +335,8 @@ Views.doprava = async function (el) {
 // =====================================================================
 Views.rozpocet = async function (el) {
   const def = {
-    odhad: "", zaplaceno: "",
-    rows: [
-      { cat: "letenky / auto / vlak", est: "", real: "" },
-      { cat: "pohonné hmoty", est: "", real: "" },
-      { cat: "ubytování", est: "", real: "" },
-      { cat: "stravování", est: "", real: "" },
-      { cat: "vstupné / suvenýry", est: "", real: "" },
-      { cat: "ostatní", est: "", real: "" }
-    ]
+    odhad: "35000", zaplaceno: "",
+    rows: window.TRIP.budgetRows.map((r) => Object.assign({}, r))
   };
   const d = Object.assign({}, def, await Store.getDoc("budget"));
   if (!d.rows || !d.rows.length) d.rows = def.rows;
@@ -374,6 +369,7 @@ Views.rozpocet = async function (el) {
           <tfoot><tr><td>Celkem</td><td class="num">${totEst ? totEst.toLocaleString("cs-CZ") : "—"}</td><td class="num">${totReal ? totReal.toLocaleString("cs-CZ") : "—"}</td><td></td></tr></tfoot>
         </table>
         <div class="btn-row"><button class="btn ghost sm" id="addRow">+ Přidat řádek</button></div>
+        <div class="install-hint" style="margin-top:10px;text-align:left">${window.TRIP.budgetNote}</div>
       </div>
       ${UI.quote("Cestování je jediná věc, kterou si koupíte, a díky které jste bohatší.")}
     `;
@@ -453,7 +449,7 @@ Views.trasa = async function (el) {
     el.querySelectorAll("[data-del]").forEach((b) => b.onclick = () => { d.rows.splice(+b.dataset.del, 1); save(); draw(); });
     el.querySelector("#addRow").onclick = () => { d.rows.push({ day: "", fromto: "", mode: "", dist: "" }); save(); draw(); };
   }
-  if (!d.rows.length) d.rows.push({ day: "1", fromto: "", mode: "", dist: "" });
+  if (!d.rows.length) d.rows = window.TRIP.route.map((r) => Object.assign({}, r));
   draw();
 };
 
@@ -648,6 +644,132 @@ Views.zatmeni = async function (el) {
   el.querySelectorAll("[data-q]").forEach((t) => t.addEventListener("input", (e) => {
     log.answers[e.target.dataset.q] = e.target.value; saveLog();
   }));
+};
+
+// =====================================================================
+//  ITINERÁŘ
+// =====================================================================
+Views.itinerar = async function (el) {
+  const T = window.TRIP;
+  const done = await Store.getDoc("itinDone");
+  const todayKey = new Date().toISOString().slice(0, 10);
+
+  el.innerHTML = `
+    <a class="back" href="#/plan">← Plán</a>
+    <div class="page-title">Itinerář</div>
+    <div class="page-sub">10.–16. srpna 2026</div>
+
+    <div class="card" style="margin-bottom:14px">
+      <span class="label">Potvrzené rezervace</span>
+      ${T.reservations.map((r) => `<div class="res"><span class="ic">${r.ic}</span><div><b>${UI.esc(r.t)}</b><div class="d">${UI.esc(r.d)}</div></div></div>`).join("")}
+      <div class="install-hint" style="text-align:left;margin-top:8px">⚠️ ${T.bagWarn}</div>
+    </div>
+
+    <div id="days"></div>
+    ${UI.quote("Život je buď odvážné dobrodružství, nebo nic.")}
+  `;
+
+  const box = el.querySelector("#days");
+  box.innerHTML = T.days.map((day, di) => {
+    const open = di === 0 ? " open" : "";
+    return `<div class="day-card${day.eclipse ? " eclipse" : ""}">
+      <button class="day-head${open}" data-day="${di}">
+        <div class="day-n">${day.n}</div>
+        <div class="day-info">
+          <div class="day-date">${UI.esc(day.date)} · ${UI.esc(day.place)}</div>
+          <div class="day-title">${UI.esc(day.title)}</div>
+        </div>
+        <span class="chev">▾</span>
+      </button>
+      <div class="day-body${open}">
+        ${day.items.map((it, ii) => {
+          const key = di + "-" + ii;
+          return `<label class="it${it.hi ? " hi" : ""}">
+            <input type="checkbox" data-k="${key}" ${done[key] ? "checked" : ""}>
+            <span class="it-t">${UI.esc(it.t)}</span>
+            <span class="it-a">${UI.esc(it.a)}</span>
+          </label>`;
+        }).join("")}
+      </div>
+    </div>`;
+  }).join("");
+
+  box.querySelectorAll(".day-head").forEach((h) => h.onclick = () => {
+    h.classList.toggle("open");
+    h.parentElement.querySelector(".day-body").classList.toggle("open");
+  });
+  box.querySelectorAll("input[type=checkbox]").forEach((c) => c.onchange = async () => {
+    done[c.dataset.k] = c.checked;
+    await Store.setDoc("itinDone", done);
+  });
+};
+
+// =====================================================================
+//  CHECKLIST (zavazadla)
+// =====================================================================
+Views.checklist = async function (el) {
+  const T = window.TRIP;
+  const done = await Store.getDoc("packing");
+  const all = T.checklist.reduce((s, g) => s + g.items.length, 0);
+  const cnt = () => T.checklist.reduce((s, g, gi) => s + g.items.filter((_, i) => done[gi + "-" + i]).length, 0);
+
+  el.innerHTML = `
+    <a class="back" href="#/plan">← Plán</a>
+    <div class="page-title">Checklist zavazadel</div>
+    <div class="page-sub" id="prog">${cnt()} / ${all} sbaleno</div>
+    ${T.checklist.map((g, gi) => `<div class="card" style="margin-bottom:12px">
+      <span class="label">${UI.esc(g.g)}</span>
+      ${g.items.map((it, i) => `<label class="chk">
+        <input type="checkbox" data-k="${gi}-${i}" ${done[gi + "-" + i] ? "checked" : ""}>
+        <span>${UI.esc(it)}</span>
+      </label>`).join("")}
+    </div>`).join("")}
+    ${UI.quote("Sbaleno a připraveno na vše, co přinese zítřek.")}
+  `;
+
+  el.querySelectorAll("input[type=checkbox]").forEach((c) => c.onchange = async () => {
+    done[c.dataset.k] = c.checked;
+    await Store.setDoc("packing", done);
+    el.querySelector("#prog").textContent = cnt() + " / " + all + " sbaleno";
+  });
+};
+
+// =====================================================================
+//  INFO & BEZPEČNOST
+// =====================================================================
+Views.info = async function (el) {
+  const T = window.TRIP;
+  el.innerHTML = `
+    <a class="back" href="#/plan">← Plán</a>
+    <div class="page-title">Info & bezpečnost</div>
+    <div class="page-sub">Důležité pro cestu</div>
+
+    <div class="card">
+      <span class="label">☀️ Bezpečné pozorování zatmění</span>
+      <ul class="info-list">${T.safety.map((s) => `<li>${UI.esc(s)}</li>`).join("")}</ul>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <span class="label">📷 Plán fotografování</span>
+      <ul class="info-list">${T.photoPlan.map((s) => `<li>${UI.esc(s)}</li>`).join("")}</ul>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <span class="label">🚨 Tísňová čísla (Španělsko)</span>
+      ${T.emergency.map((e) => `<div class="kv"><b>${UI.esc(e.n)}</b><span>${UI.esc(e.d)}</span></div>`).join("")}
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <span class="label">📱 Doporučené aplikace</span>
+      ${T.apps.map((a) => `<div class="kv"><b>${UI.esc(a.t)}</b><span>${UI.esc(a.d)}</span></div>`).join("")}
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <span class="label">🔗 Užitečné odkazy</span>
+      ${T.links.map((l) => `<a class="linkrow" href="${l.u}" target="_blank" rel="noopener">${UI.esc(l.t)} ↗</a>`).join("")}
+    </div>
+    ${UI.quote("Nejkrásnější pohled na svět je ten, který si musíte zasloužit výšlapem.")}
+  `;
 };
 
 window.Views = Views;
