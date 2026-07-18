@@ -118,17 +118,15 @@
     }
   }
 
-  // Na Androidu (Chrome) firing OBOU událostí "deviceorientation" a
-  // "deviceorientationabsolute" pro stejný fyzický pohyb vracelo dvě mírně
-  // odlišné hodnoty azimutu těsně po sobě → viditelné problikávání/skákání
-  // mřížky. Proto se poslouchá jen JEDEN typ události — přesnější
-  // "absolute", pokud ho prohlížeč nabízí.
+  // Poslouchají se OBĚ události (na některých Android prohlížečích prohlížeč
+  // sice nahlásí podporu "deviceorientationabsolute", ale ve skutečnosti ji
+  // nikdy nevyšle nebo jen zřídka — kdybychom poslouchali jen ji, appka by
+  // dostávala málo/žádná data). Duplicitní zprávy o témže okamžiku (obě
+  // události pro stejný fyzický pohyb) se filtrují podle času v onOrient,
+  // ne podle typu události.
   function attachOrientListeners() {
-    if ("ondeviceorientationabsolute" in window) {
-      window.addEventListener("deviceorientationabsolute", onOrient, true);
-    } else {
-      window.addEventListener("deviceorientation", onOrient, true);
-    }
+    window.addEventListener("deviceorientationabsolute", onOrient, true);
+    window.addEventListener("deviceorientation", onOrient, true);
   }
 
   async function startCamera() {
@@ -150,8 +148,14 @@
   // i při klidně drženém telefonu.
   let smoothed = null; // {heading, pitch}
   const SMOOTH = 0.25;
+  let lastSampleTs = 0;
+  const MIN_SAMPLE_GAP = 30; // ms — filtruje duplicitní zprávy o témže okamžiku
 
   function onOrient(e) {
+    const now = (window.performance || Date).now();
+    if (now - lastSampleTs < MIN_SAMPLE_GAP) return;
+    lastSampleTs = now;
+
     let heading = null;
     if (typeof e.webkitCompassHeading === "number") {
       heading = e.webkitCompassHeading;            // iOS: přímo od severu
