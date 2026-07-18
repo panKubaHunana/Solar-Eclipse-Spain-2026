@@ -607,6 +607,23 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--gold-2); ou
 .linkrow { display: block; padding: 10px 0; border-bottom: 1px dashed var(--line); color: var(--gold); text-decoration: none; font-weight: 600; font-size: 14px; }
 .linkrow:last-child { border-bottom: none; }
 
+/* ---- Sdílení (Supabase) ------------------------------------------ */
+.share-status { display: flex; align-items: flex-start; gap: 12px; }
+.share-status .d { width: 12px; height: 12px; border-radius: 50%; background: var(--ink-3); margin-top: 4px; flex: 0 0 auto; }
+.share-status.on .d { background: var(--teal); box-shadow: 0 0 0 4px rgba(47,109,106,0.2); }
+.share-status b { font-size: 15px; }
+.guide { margin: 4px 0 0; padding-left: 20px; }
+.guide li { font-size: 13.5px; line-height: 1.55; margin-bottom: 9px; }
+.guide li b { color: var(--ink); }
+.sql {
+  background: #20262e; color: #e7dac1; border-radius: 10px; padding: 12px 14px; margin: 10px 0 0;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; line-height: 1.5;
+  overflow-x: auto; white-space: pre; -webkit-overflow-scrolling: touch;
+}
+.share-msg { font-size: 13px; margin-top: 8px; min-height: 18px; }
+.share-msg.err { color: var(--terra); }
+.share-msg.ok { color: var(--teal); }
+
 /* ---- Keepsake karta (Domů) --------------------------------------- */
 .keepsake { display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--ink); margin-top: 16px; }
 .keepsake .ic { font-size: 30px; }

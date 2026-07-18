@@ -141,6 +141,7 @@ const ROUTES = {
   "plan/mapa": { view: "mapa", tab: "plan" },
   "plan/checklist": { view: "checklist", tab: "plan" },
   "plan/info": { view: "info", tab: "plan" },
+  "plan/sdileni": { view: "nastaveni", tab: "plan" },
   "tisk": { view: "tisk", tab: "plan" },
   "zatmeni": { view: "zatmeni", tab: "zatmeni" }
 };
@@ -203,6 +204,8 @@ async function boot() {
   const sp = document.getElementById("sync");
   if (Store.isShared()) { sp.classList.add("on"); sp.querySelector(".txt").textContent = "Sdíleno"; }
   else { sp.querySelector(".txt").textContent = "V telefonu"; }
+  sp.style.cursor = "pointer";
+  sp.onclick = () => { location.hash = "#/plan/sdileni"; };
   // Realtime: vzdálená změna (druhý telefon) → přenačti aktuální pohled.
   Store.onChange(() => route());
 

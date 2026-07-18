@@ -27,49 +27,38 @@ funguje **offline** a data se dají **sdílet mezi oběma telefony**.
 
 Aplikace je čistě statická (HTML/CSS/JS), takže ji GitHub Pages hostuje zdarma:
 
-1. V repozitáři **Settings → Pages**.
-2. **Source:** *Deploy from a branch*.
-3. Vyber větev (např. `main` po sloučení) a složku **/ (root)**, ulož.
-4. Za chvíli poběží na `https://<uživatel>.github.io/<repo>/`.
-5. Na telefonu tuto adresu otevři a zvol **„Přidat na plochu"** — máš appku.
+1. V repozitáři nahoře **Settings → Pages**.
+2. **Build and deployment → Source:** *Deploy from a branch*.
+3. **Branch:** `claude/travel-diary-pwa-app-o56sl3` (výchozí větev), složka **/ (root)** → **Save**.
+4. Za ~1 minutu poběží na adrese, kterou Pages nahoře ukáže
+   (`https://<uživatel>.github.io/solar-eclipse-spain-2026/`).
+5. Na telefonu adresu otevři a zvol **„Přidat na plochu"** — máš appku. Každý další
+   `push` do větve web automaticky přenasadí.
 
 > Kamera (AR) a senzory fungují jen přes **HTTPS** — GitHub Pages HTTPS má, takže OK.
 > Na iPhonu appka při prvním spuštění AR požádá o přístup k **pohybu** a **kameře**.
+> Soubor `.nojekyll` zajišťuje, že Pages servíruje soubory beze změn.
 
 ## Společný (sdílený) deník — Supabase
 
 Bez nastavení appka ukládá data **lokálně v telefonu** (offline, soukromé).
-Aby Jakub i Honza viděli stejné zápisky a fotky, zapni jednou zdarma Supabase:
+Aby Jakub i Honza viděli stejné zápisky a fotky, není potřeba editovat kód —
+vše se nastaví přímo v aplikaci:
 
-1. Založ projekt na <https://supabase.com> (New project).
-2. V **SQL Editoru** spusť:
+1. V appce otevři **Plán → Sdílení deníku** (nebo klikni na indikátor vpravo nahoře).
+2. Postupuj podle návodu na obrazovce: založ zdarma projekt na
+   <https://supabase.com>, v **SQL Editoru** spusť připravený SQL (tlačítko
+   *Zkopírovat SQL*) a v **Project Settings → API** zkopíruj **Project URL** a klíč
+   **anon public**.
+3. Obojí vlož do formuláře a klikni **Připojit a synchronizovat**. Appka ověří
+   spojení a přepne se na **„Sdíleno"**.
+4. Na **druhém telefonu** zadej stejné dvě hodnoty. Hotovo — společný deník. ✅
 
-   ```sql
-   create table docs  (name text primary key, data jsonb);
-   create table items (_key text primary key, collection text, ts bigint, value jsonb);
-
-   alter table docs  enable row level security;
-   alter table items enable row level security;
-
-   -- jednoduchý společný přístup pro vás dva (bez přihlašování)
-   create policy "anon rw docs"  on docs  for all using (true) with check (true);
-   create policy "anon rw items" on items for all using (true) with check (true);
-   ```
-
-3. V **Project Settings → API** zkopíruj **Project URL** a klíč **anon public**.
-4. Vlož je do `js/config.js`:
-
-   ```js
-   SUPABASE_URL: "https://xxxxxxxx.supabase.co",
-   SUPABASE_ANON_KEY: "eyJhbGciOi...",
-   ```
-
-5. Commitni, pushni — hotovo. Appka se přepne do režimu **„Sdíleno"** (indikátor
-   vpravo nahoře) a synchronizuje v reálném čase mezi oběma telefony.
-
-> Klíč `anon public` je určený do frontendu — není to tajemství. Přístup hlídají
-> pravidla (RLS) výše. Chceš-li soukromí jen pro vás dva, dá se doplnit heslo /
-> přihlášení — napiš a doděláme.
+> Klíč `anon public` je určený do frontendu — není to tajemství, a přístup hlídají
+> pravidla RLS z připraveného SQL. Údaje se ukládají jen v telefonu (localStorage),
+> nikam se nepublikují. Chceš-li soukromí jen pro vás dva (heslo/přihlášení), napiš
+> a doděláme. Alternativně jde vyplnit `SUPABASE_URL`/`SUPABASE_ANON_KEY` v
+> `js/config.js`.
 
 ## Technika
 
@@ -90,6 +79,7 @@ js/config.js          nastavení (Supabase, cestovatelé, časy)
 js/sun.js             poloha Slunce (AR)
 js/weather.js         živé počasí
 js/eclipse.js         data o zatmění (časy fází)
+js/trip.js            data cesty (itinerář, rozpočet, checklist, info)
 js/store.js           datová vrstva (IndexedDB + Supabase)
 js/ar.js              AR hledáček Slunce
 js/views.js           obrazovky

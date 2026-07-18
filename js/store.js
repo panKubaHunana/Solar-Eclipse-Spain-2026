@@ -78,16 +78,27 @@
   }
 
   // ---- Supabase (volitelné) ----------------------------------------
+  //  Údaje se berou primárně z nastavení v telefonu (obrazovka „Sdílení"),
+  //  případně z js/config.js. Uživatel nemusí editovat kód.
   let sb = null;
-  const supaConfigured = !!(cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY);
+  function creds() {
+    try {
+      const s = JSON.parse(localStorage.getItem("eclipse-supabase") || "null");
+      if (s && s.url && s.key) return { url: s.url.trim().replace(/\/+$/, ""), key: s.key.trim() };
+    } catch (_) {}
+    if (cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY)
+      return { url: cfg.SUPABASE_URL, key: cfg.SUPABASE_ANON_KEY };
+    return null;
+  }
 
   async function initSupabase() {
-    if (!supaConfigured) return;
+    const c = creds();
+    if (!c) return;
     try {
       const mod = await import(
         "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"
       );
-      sb = mod.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+      sb = mod.createClient(c.url, c.key);
       // Realtime: po vzdálené změně přenačti a informuj UI.
       sb.channel("eclipse-sync")
         .on("postgres_changes", { event: "*", schema: "public", table: "items" }, notify)

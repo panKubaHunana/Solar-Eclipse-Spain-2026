@@ -262,6 +262,7 @@ Views.plan = async function (el) {
       <a class="tile" href="#/plan/fakta"><span class="ic">📌</span><span class="t">Základní fakta</span><span class="d">Mise, obavy, co nesmíme minout</span></a>
       <a class="tile" href="#/plan/info"><span class="ic">ℹ️</span><span class="t">Info & bezpečnost</span><span class="d">Tísňová čísla, foto plán, aplikace</span></a>
       <a class="tile" href="#/tisk"><span class="ic">🖨️</span><span class="t">Kronika k tisku</span><span class="d">Vytisknout deník na památku</span></a>
+      <a class="tile" href="#/plan/sdileni"><span class="ic">🔗</span><span class="t">Sdílení deníku</span><span class="d">Společný deník s Honzou (Supabase)</span></a>
     </div>
     ${UI.quote("Dobrodružství začíná tam, kde končí tvá komfortní zóna.")}
   `;
@@ -780,6 +781,114 @@ Views.info = async function (el) {
     </div>
     ${UI.quote("Nejkrásnější pohled na svět je ten, který si musíte zasloužit výšlapem.")}
   `;
+};
+
+// =====================================================================
+//  SDÍLENÍ (Supabase) — nastavení bez editace kódu
+// =====================================================================
+const SUPA_SQL =
+`-- Zkopíruj celý tento blok do Supabase → SQL Editor → Run
+create table if not exists docs  (name text primary key, data jsonb);
+create table if not exists items (_key text primary key, collection text, ts bigint, value jsonb);
+
+alter table docs  enable row level security;
+alter table items enable row level security;
+
+create policy "anon rw docs"  on docs  for all using (true) with check (true);
+create policy "anon rw items" on items for all using (true) with check (true);
+
+alter publication supabase_realtime add table docs, items;`;
+
+Views.nastaveni = async function (el) {
+  const shared = Store.isShared();
+  const cur = (() => { try { return JSON.parse(localStorage.getItem("eclipse-supabase") || "null"); } catch (_) { return null; } })();
+
+  el.innerHTML = `
+    <a class="back" href="#/plan">← Plán</a>
+    <div class="page-title">Sdílení deníku</div>
+    <div class="page-sub">Společná kronika na obou telefonech</div>
+
+    <div class="card">
+      <div class="share-status ${shared ? "on" : ""}">
+        <span class="d"></span>
+        <div>
+          <b>${shared ? "Sdíleno mezi telefony" : "Uloženo jen v tomto telefonu"}</b>
+          <div class="install-hint" style="text-align:left;margin:2px 0 0">
+            ${shared ? "Zápisky a fotky se synchronizují přes Supabase." : "Zatím se nic nesdílí. Nastav Supabase níže."}
+          </div>
+        </div>
+      </div>
+      ${cur ? `<div class="install-hint" style="text-align:left;margin-top:10px">Připojeno: <b>${UI.esc(cur.url)}</b></div>
+        <div class="btn-row"><button class="btn ghost sm" id="disc">Odpojit</button></div>` : ""}
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <span class="label">Postup krok za krokem</span>
+      <ol class="guide">
+        <li>Jdi na <b>supabase.com</b> → <b>Start your project</b> a přihlas se (třeba přes GitHub).</li>
+        <li>Klikni <b>New project</b>. Zvol jméno (např. <i>eclipse</i>), vymysli <b>Database password</b> (ulož si ho) a region <b>Europe</b>. Počkej ~2 min, než se projekt vytvoří.</li>
+        <li>Vlevo otevři <b>SQL Editor</b> → <b>New query</b>. Vlož tento kód a klikni <b>Run</b>:</li>
+      </ol>
+      <pre class="sql" id="sql">${UI.esc(SUPA_SQL)}</pre>
+      <div class="btn-row"><button class="btn ghost sm" id="copySql">📋 Zkopírovat SQL</button></div>
+      <ol class="guide" start="4">
+        <li>Vlevo dole <b>Project Settings</b> (ozubené kolo) → <b>API</b>.</li>
+        <li>Zkopíruj <b>Project URL</b> a klíč <b>anon public</b> a vlož je sem dolů. Hotovo! ✅</li>
+      </ol>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <span class="label">Připojení</span>
+      <input id="sUrl" placeholder="Project URL (https://xxxx.supabase.co)" value="${cur ? UI.esc(cur.url) : ""}">
+      <input id="sKey" placeholder="anon public klíč (eyJhbG...)" value="${cur ? UI.esc(cur.key) : ""}">
+      <button class="btn gold block" id="connect">Připojit a synchronizovat</button>
+      <div class="share-msg" id="msg"></div>
+      <div class="install-hint" style="text-align:left;margin-top:10px">
+        Na <b>druhém telefonu</b> (Honza) zadej stejné dvě hodnoty — a budete mít společný deník.
+        Tyto údaje se ukládají jen v telefonu, ne do aplikace na webu.
+      </div>
+    </div>
+    ${UI.quote("Nejlepší vzpomínky vznikají, když je sdílíš.")}
+  `;
+
+  el.querySelector("#copySql").onclick = async () => {
+    try { await navigator.clipboard.writeText(SUPA_SQL); UI.toast("SQL zkopírováno ✓"); }
+    catch (_) { UI.toast("Označ a zkopíruj ručně"); }
+  };
+
+  const disc = el.querySelector("#disc");
+  if (disc) disc.onclick = () => {
+    if (!confirm("Odpojit sdílení? Data v telefonu zůstanou.")) return;
+    localStorage.removeItem("eclipse-supabase");
+    location.reload();
+  };
+
+  el.querySelector("#connect").onclick = async () => {
+    const url = el.querySelector("#sUrl").value.trim().replace(/\/+$/, "");
+    const key = el.querySelector("#sKey").value.trim();
+    const msg = el.querySelector("#msg");
+    if (!/^https:\/\/.+\.supabase\.co$/.test(url)) { msg.className = "share-msg err"; msg.textContent = "URL by měla vypadat jako https://xxxx.supabase.co"; return; }
+    if (key.length < 30) { msg.className = "share-msg err"; msg.textContent = "Klíč anon public vypadá moc krátký."; return; }
+    msg.className = "share-msg"; msg.textContent = "Ověřuji připojení…";
+    try {
+      const r = await fetch(url + "/rest/v1/docs?select=name&limit=1", {
+        headers: { apikey: key, Authorization: "Bearer " + key }
+      });
+      if (r.status === 200) {
+        localStorage.setItem("eclipse-supabase", JSON.stringify({ url, key }));
+        msg.className = "share-msg ok"; msg.textContent = "Připojeno! Zapínám synchronizaci…";
+        setTimeout(() => location.reload(), 900);
+      } else if (r.status === 404) {
+        msg.className = "share-msg err"; msg.textContent = "Tabulky nenalezeny — spustil jsi SQL (krok 3)?";
+      } else if (r.status === 401 || r.status === 403) {
+        msg.className = "share-msg err"; msg.textContent = "Klíč nebo URL nesedí. Zkontroluj anon public klíč.";
+      } else {
+        msg.className = "share-msg err"; msg.textContent = "Neočekávaná odpověď (" + r.status + ").";
+      }
+    } catch (e) {
+      msg.className = "share-msg err"; msg.textContent = "Nepodařilo se spojit (jsi online?).";
+    }
+  };
 };
 
 // =====================================================================
