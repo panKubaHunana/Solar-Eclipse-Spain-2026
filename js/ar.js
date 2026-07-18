@@ -10,10 +10,14 @@
   const shortest = (a) => ((((a % 360) + 540) % 360) - 180); // -180..180
 
   let root, video, grid, gctx, marker, arrow, readout, altInfo, stream, rafId;
-  let orient = null;               // {heading, pitch}
+  let orient = null;               // {heading, pitch} ze senzorů
   let headingOffset = 0;           // ruční kalibrace
   let target = null;               // {az, alt, label}
   let loc = null;
+  let sensorState = "idle";        // idle | pending | granted | denied | unsupported | silent
+  let manualMode = false;          // ruční ovládání, když kompas nefunguje/není povolen
+  let manual = { heading: 0, pitch: 10 };
+  let statusEl, enableBtn, manualBox;
 
   function h(tag, cls, html) {
     const el = document.createElement(tag);
@@ -25,12 +29,29 @@
   async function open(location) {
     loc = location;
     headingOffset = 0;
+    orient = null; manualMode = false;
     buildTargets(location);
     render();
     root.classList.add("show");
     document.body.style.overflow = "hidden";
-    await startSensors();
+
+    if (typeof DeviceOrientationEvent === "undefined") {
+      sensorState = "unsupported";
+    } else if (needsExplicitPermission()) {
+      sensorState = "idle"; // čeká na tap „Povolit kompas"
+    } else {
+      sensorState = "pending";
+      attachOrientListeners();
+      setTimeout(() => { if (!orient) { sensorState = "silent"; updateStatus(); } }, 2500);
+    }
+    updateStatus();
+    startCamera();
     loop();
+  }
+
+  function needsExplicitPermission() {
+    return typeof DeviceOrientationEvent !== "undefined" &&
+      typeof DeviceOrientationEvent.requestPermission === "function";
   }
 
   function close() {
@@ -77,8 +98,32 @@
   }
 
   // --- senzory ------------------------------------------------------
-  async function startSensors() {
-    // kamera
+  // DŮLEŽITÉ (iOS): DeviceOrientationEvent.requestPermission() musí být
+  // zavoláno přímo z dotykového gesta uživatele (tap na tlačítko), jinak
+  // ho Safari potichu zamítne. Proto se volá samostatně z tlačítka
+  // „Povolit kompas", ne automaticky po startu kamery.
+  async function requestOrientation() {
+    sensorState = "pending"; updateStatus();
+    try {
+      const p = await DeviceOrientationEvent.requestPermission();
+      if (p === "granted") {
+        sensorState = "granted"; updateStatus();
+        attachOrientListeners();
+        setTimeout(() => { if (!orient) { sensorState = "silent"; updateStatus(); } }, 2500);
+      } else {
+        sensorState = "denied"; updateStatus();
+      }
+    } catch (e) {
+      sensorState = "denied"; updateStatus();
+    }
+  }
+
+  function attachOrientListeners() {
+    window.addEventListener("deviceorientationabsolute", onOrient, true);
+    window.addEventListener("deviceorientation", onOrient, true);
+  }
+
+  async function startCamera() {
     try {
       stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: "environment" } },
@@ -89,18 +134,6 @@
       root.classList.remove("nocam");
     } catch (e) {
       root.classList.add("nocam");
-    }
-    // orientace
-    try {
-      if (typeof DeviceOrientationEvent !== "undefined" &&
-          typeof DeviceOrientationEvent.requestPermission === "function") {
-        const p = await DeviceOrientationEvent.requestPermission();
-        if (p !== "granted") throw new Error("orientace zamítnuta");
-      }
-      window.addEventListener("deviceorientationabsolute", onOrient, true);
-      window.addEventListener("deviceorientation", onOrient, true);
-    } catch (e) {
-      root.classList.add("noorient");
     }
   }
 
@@ -117,7 +150,25 @@
     // sklon: telefon svisle (kamera vpřed) → beta ≈ 90; výška = beta - 90
     const pitch = (e.beta != null ? e.beta : 90) - 90;
     orient = { heading, pitch };
-    root.classList.remove("noorient");
+    sensorState = "granted";
+    updateStatus();
+  }
+
+  function updateStatus() {
+    if (!statusEl) return;
+    const map = {
+      idle: { t: "🧭 Kompas: čeká na povolení", cls: "" },
+      pending: { t: "🧭 Kompas: zjišťuji…", cls: "" },
+      granted: { t: "🧭 Kompas: aktivní", cls: "ok" },
+      denied: { t: "🧭 Kompas: zamítnut — povol v Nastavení telefonu, nebo použij ruční režim níže", cls: "warn" },
+      unsupported: { t: "🧭 Kompas: telefon ho nepodporuje — použij ruční režim níže", cls: "warn" },
+      silent: { t: "🧭 Kompas neodpovídá (zkus pohnout telefonem do tvaru osmičky), nebo použij ruční režim níže", cls: "warn" }
+    };
+    const s = map[sensorState] || map.idle;
+    statusEl.textContent = s.t;
+    statusEl.className = "ar-sensor-status " + s.cls;
+    if (enableBtn) enableBtn.style.display = (sensorState === "idle" || sensorState === "denied") ? "block" : "none";
+    if (manualBox) manualBox.style.display = (manualMode || sensorState === "denied" || sensorState === "silent" || sensorState === "unsupported") ? "block" : "none";
   }
 
   // --- vykreslování překrytí ---------------------------------------
@@ -128,7 +179,7 @@
 
   const COMPASS = { 0: "S", 45: "SV", 90: "V", 135: "JV", 180: "J", 225: "JZ", 270: "Z", 315: "SZ" };
 
-  function drawGrid(w, hgt, pxPerDeg) {
+  function drawGrid(w, hgt, pxPerDeg, eff) {
     const dpr = window.devicePixelRatio || 1;
     if (grid.width !== Math.round(w * dpr)) { grid.width = Math.round(w * dpr); grid.height = Math.round(hgt * dpr); }
     gctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -136,11 +187,11 @@
     gctx.font = "12px system-ui, sans-serif";
     gctx.lineWidth = 1;
 
-    const heading = orient.heading + headingOffset;
+    const heading = eff.heading + headingOffset;
 
     // výškové kružnice (vodorovné čáry)
     for (let alt = -10; alt <= 70; alt += 10) {
-      const y = hgt / 2 - (alt - orient.pitch) * pxPerDeg;
+      const y = hgt / 2 - (alt - eff.pitch) * pxPerDeg;
       if (y < 20 || y > hgt - 20) continue;
       const horizon = alt === 0;
       gctx.strokeStyle = horizon ? "rgba(255,214,107,0.85)" : "rgba(255,255,255,0.28)";
@@ -172,6 +223,11 @@
     }
   }
 
+  function effectiveOrient() {
+    if (manualMode) return manual;
+    return orient;
+  }
+
   function draw() {
     if (!target) return;
     const w = root.clientWidth, hgt = root.clientHeight;
@@ -180,16 +236,17 @@
       Math.round(target.az) + "° " + window.Sun.compassName(target.az);
     readout.querySelector(".r-alt").textContent = target.alt.toFixed(1) + "°";
 
-    if (!orient) {
+    const eff = effectiveOrient();
+    if (!eff) {
       marker.style.opacity = 0; arrow.style.display = "none";
       if (grid.width) gctx.clearRect(0, 0, grid.width, grid.height);
       return;
     }
 
-    drawGrid(w, hgt, pxPerDeg);
+    drawGrid(w, hgt, pxPerDeg, eff);
 
-    const dAz = shortest(target.az - (orient.heading + headingOffset));
-    const dAlt = target.alt - orient.pitch;
+    const dAz = shortest(target.az - (eff.heading + headingOffset));
+    const dAlt = target.alt - eff.pitch;
     const x = w / 2 + dAz * pxPerDeg;
     const y = hgt / 2 - dAlt * pxPerDeg;
 
@@ -274,15 +331,57 @@
     cal.appendChild(minus); cal.appendChild(plus);
     bottom.appendChild(cal);
 
+    // stav senzorů + tlačítko na explicitní povolení (nutné na iPhonu)
+    statusEl = h("div", "ar-sensor-status", "");
+    bottom.appendChild(statusEl);
+
+    enableBtn = h("button", "ar-enable", "🧭 Povolit kompas a náklon");
+    enableBtn.style.display = "none";
+    enableBtn.onclick = () => {
+      if (needsExplicitPermission()) requestOrientation();
+      else { attachOrientListeners(); sensorState = "pending"; updateStatus(); }
+    };
+    bottom.appendChild(enableBtn);
+
+    // ruční záložní režim (kompas nedostupný / nespolehlivý)
+    manualBox = h("div", "ar-manual");
+    manualBox.style.display = "none";
+    manualBox.innerHTML = `
+      <label class="ar-manual-toggle">
+        <input type="checkbox" id="manualToggle"> Ruční nastavení (bez kompasu)
+      </label>
+      <div class="ar-manual-row">
+        <span>Azimut</span>
+        <input type="range" id="manualAz" min="0" max="359" value="${manual.heading}">
+        <b id="manualAzVal">${manual.heading}°</b>
+      </div>
+      <div class="ar-manual-row">
+        <span>Náklon</span>
+        <input type="range" id="manualPitch" min="-20" max="80" value="${manual.pitch}">
+        <b id="manualPitchVal">${manual.pitch}°</b>
+      </div>
+      <div class="install-hint" style="text-align:left;margin-top:4px">
+        Zjisti si sever (kompas v jiné appce) a nastav azimut ručně, nebo prostě posouvej,
+        dokud značka nesedí na skutečné Slunce.
+      </div>`;
+    bottom.appendChild(manualBox);
+
+    manualBox.querySelector("#manualToggle").onchange = (e) => { manualMode = e.target.checked; };
+    manualBox.querySelector("#manualAz").oninput = (e) => {
+      manual.heading = +e.target.value;
+      manualBox.querySelector("#manualAzVal").textContent = manual.heading + "°";
+      manualBox.querySelector("#manualToggle").checked = true; manualMode = true;
+    };
+    manualBox.querySelector("#manualPitch").oninput = (e) => {
+      manual.pitch = +e.target.value;
+      manualBox.querySelector("#manualPitchVal").textContent = manual.pitch + "°";
+      manualBox.querySelector("#manualToggle").checked = true; manualMode = true;
+    };
+
     altInfo = h("div", "ar-note",
       "Namiř telefon na západní obzor. Značka ukazuje polohu Slunce v daný okamžik. " +
       "Zkontroluj, jestli výhled ve výšce Slunce neblokují kopce nebo budovy.");
     bottom.appendChild(altInfo);
-
-    const fbNote = h("div", "ar-fallback",
-      "Kamera nebo senzory nejsou dostupné — použij azimut a výšku výše a namiř podle kompasu. " +
-      "Na iPhonu je potřeba povolit přístup k pohybu a kameře.");
-    bottom.appendChild(fbNote);
 
     root.appendChild(bottom);
     document.body.appendChild(root);
