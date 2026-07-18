@@ -142,6 +142,7 @@ const ROUTES = {
   "plan/checklist": { view: "checklist", tab: "plan" },
   "plan/info": { view: "info", tab: "plan" },
   "plan/sdileni": { view: "nastaveni", tab: "plan" },
+  "plan/penezenka": { view: "penezenka", tab: "plan" },
   "tisk": { view: "tisk", tab: "plan" },
   "zatmeni": { view: "zatmeni", tab: "zatmeni" }
 };

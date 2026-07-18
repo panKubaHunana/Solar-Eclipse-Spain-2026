@@ -263,6 +263,7 @@ Views.plan = async function (el) {
       <a class="tile" href="#/plan/info"><span class="ic">ℹ️</span><span class="t">Info & bezpečnost</span><span class="d">Tísňová čísla, foto plán, aplikace</span></a>
       <a class="tile" href="#/tisk"><span class="ic">🖨️</span><span class="t">Kronika k tisku</span><span class="d">Vytisknout deník na památku</span></a>
       <a class="tile" href="#/plan/sdileni"><span class="ic">🔗</span><span class="t">Sdílení deníku</span><span class="d">Společný deník s Honzou (Supabase)</span></a>
+      <a class="tile" href="#/plan/penezenka"><span class="ic">🎫</span><span class="t">Peněženka</span><span class="d">Letenky, jízdenky, QR kódy vstupenek</span></a>
     </div>
     ${UI.quote("Dobrodružství začíná tam, kde končí tvá komfortní zóna.")}
   `;
@@ -798,6 +799,186 @@ create policy "anon rw docs"  on docs  for all using (true) with check (true);
 create policy "anon rw items" on items for all using (true) with check (true);
 
 alter publication supabase_realtime add table docs, items;`;
+
+// =====================================================================
+//  PENĚŽENKA — letenky, jízdenky, vstupenky, QR kódy
+// =====================================================================
+const WALLET_CATS = [
+  { id: "let", label: "Letenka", icon: "✈️" },
+  { id: "vlak", label: "Vlak / Bus", icon: "🚆" },
+  { id: "auto", label: "Auto", icon: "🚗" },
+  { id: "ubytovani", label: "Ubytování", icon: "🏨" },
+  { id: "vstup", label: "Vstupenka", icon: "🎫" },
+  { id: "jine", label: "Jiné", icon: "📄" }
+];
+function walletCat(id) {
+  return WALLET_CATS.find((c) => c.id === id) || WALLET_CATS[WALLET_CATS.length - 1];
+}
+
+function openWalletViewer(item) {
+  const cat = walletCat(item.category);
+  const ov = UI.h("div", "wallet-view", `
+    <div class="wv-top">
+      <div class="wv-title">${cat.icon} ${UI.esc(item.title)}</div>
+      <button class="ar-x" id="wvClose">✕</button>
+    </div>
+    <div class="wv-body">
+      ${item.image ? `<img src="${item.image}" alt="">` : `<div class="wv-noimg">${cat.icon}</div>`}
+      ${item.subtitle ? `<div class="wv-sub">${UI.esc(item.subtitle)}</div>` : ""}
+      ${item.note ? `<div class="wv-note">${UI.esc(item.note)}</div>` : ""}
+    </div>
+  `);
+  document.body.appendChild(ov);
+  document.body.style.overflow = "hidden";
+  const close = () => { ov.remove(); document.body.style.overflow = ""; };
+  ov.querySelector("#wvClose").onclick = close;
+}
+
+Views.penezenka = async function (el) {
+  let mode = "photo";
+  let cat = WALLET_CATS[0].id;
+  let pendingImage = "";
+
+  el.innerHTML = `
+    <a class="back" href="#/plan">← Plán</a>
+    <div class="page-title">Peněženka</div>
+    <div class="page-sub">Letenky, jízdenky, vstupenky</div>
+
+    <div class="card">
+      <span class="label">Kategorie</span>
+      <div class="mood-picker" id="wCats">
+        ${WALLET_CATS.map((c) => `<button data-c="${c.id}" class="${c.id === cat ? "sel" : ""}" title="${UI.esc(c.label)}">${c.icon}</button>`).join("")}
+      </div>
+
+      <input id="wTitle" placeholder="Název (např. Let Praha → Madrid)">
+      <input id="wSub" placeholder="Detail (nepovinné — FR 2767 · 10. 8. 09:35)">
+
+      <div class="loc-tabs wallet-tabs" id="wModeTabs">
+        <button data-m="photo" class="sel">📷 Foto / screenshot</button>
+        <button data-m="qr">🔳 Vygenerovat QR</button>
+      </div>
+
+      <div id="wPhotoBox" class="photo-input">
+        <label class="btn ghost sm">📷 Vybrat fotku<input type="file" accept="image/*" id="wPhoto" hidden></label>
+        <img class="thumb" id="wThumb" style="display:none">
+      </div>
+      <div id="wQrBox" style="display:none">
+        <textarea id="wQrText" placeholder="Vlož text, odkaz nebo kód rezervace…"></textarea>
+        <div class="btn-row">
+          <button class="btn ghost sm" id="wQrGen">Vygenerovat QR kód</button>
+        </div>
+        <img class="thumb" id="wQrThumb" style="display:none;margin-top:10px">
+      </div>
+
+      <textarea id="wNote" placeholder="Poznámka (nepovinné)" style="margin-top:10px"></textarea>
+      <button class="btn gold block" id="wSave">Uložit do peněženky</button>
+    </div>
+
+    <div id="wList" style="margin-top:18px"></div>
+    ${UI.quote("Sbaleno a připraveno na vše, co přinese zítřek.")}
+  `;
+
+  el.querySelector("#wCats").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    cat = b.dataset.c;
+    [...e.currentTarget.children].forEach((c) => c.classList.remove("sel"));
+    b.classList.add("sel");
+  });
+
+  const photoBox = el.querySelector("#wPhotoBox");
+  const qrBox = el.querySelector("#wQrBox");
+  el.querySelector("#wModeTabs").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    mode = b.dataset.m;
+    [...e.currentTarget.children].forEach((c) => c.classList.remove("sel"));
+    b.classList.add("sel");
+    photoBox.style.display = mode === "photo" ? "block" : "none";
+    qrBox.style.display = mode === "qr" ? "block" : "none";
+  });
+
+  const thumb = el.querySelector("#wThumb");
+  el.querySelector("#wPhoto").addEventListener("change", async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    pendingImage = await UI.fileToDataURL(f, 1600);
+    thumb.src = pendingImage; thumb.style.display = "block";
+  });
+
+  const qrThumb = el.querySelector("#wQrThumb");
+  el.querySelector("#wQrGen").onclick = async () => {
+    const text = el.querySelector("#wQrText").value.trim();
+    if (!text) { UI.toast("Vlož nejdřív text nebo odkaz"); return; }
+    const btn = el.querySelector("#wQrGen");
+    btn.textContent = "Generuji…"; btn.disabled = true;
+    try {
+      const mod = await import("https://cdn.jsdelivr.net/npm/qrcode@1.5.3/+esm");
+      const QRCode = mod.default || mod;
+      pendingImage = await QRCode.toDataURL(text, {
+        width: 640, margin: 2,
+        color: { dark: "#20262e", light: "#f2e8d3" }
+      });
+      qrThumb.src = pendingImage; qrThumb.style.display = "block";
+      UI.toast("QR kód vygenerován ✓");
+    } catch (e) {
+      UI.toast("Nepodařilo se vygenerovat (je potřeba internet)");
+    }
+    btn.textContent = "Vygenerovat QR kód"; btn.disabled = false;
+  };
+
+  el.querySelector("#wSave").onclick = async () => {
+    const title = el.querySelector("#wTitle").value.trim();
+    const subtitle = el.querySelector("#wSub").value.trim();
+    const note = el.querySelector("#wNote").value.trim();
+    if (!title) { UI.toast("Zadej aspoň název"); return; }
+    await Store.add("wallet", { category: cat, title, subtitle, note, image: pendingImage });
+    UI.toast("Uloženo do peněženky ✓");
+    el.querySelector("#wTitle").value = ""; el.querySelector("#wSub").value = ""; el.querySelector("#wNote").value = "";
+    el.querySelector("#wQrText").value = "";
+    pendingImage = "";
+    thumb.style.display = "none"; qrThumb.style.display = "none";
+    renderList();
+  };
+
+  async function renderList() {
+    const items = await Store.list("wallet");
+    const box = el.querySelector("#wList");
+    if (!items.length) {
+      box.innerHTML = `<div class="empty"><div class="ic">🎫</div><p>Peněženka je zatím prázdná.<br>Přidej letenku, jízdenku nebo vstupenku výš. ✈️</p></div>`;
+      return;
+    }
+    let html = "";
+    WALLET_CATS.forEach((c) => {
+      const group = items.filter((i) => i.category === c.id);
+      if (!group.length) return;
+      html += `<span class="label">${c.icon} ${UI.esc(c.label)}</span>`;
+      html += group.map((i) => `<div class="wallet-item" data-id="${i.id}">
+        ${i.image ? `<img src="${i.image}" alt="">` : `<div class="wallet-noimg">${c.icon}</div>`}
+        <div class="wallet-info">
+          <div class="wallet-t">${UI.esc(i.title)}</div>
+          ${i.subtitle ? `<div class="wallet-s">${UI.esc(i.subtitle)}</div>` : ""}
+        </div>
+        <button class="row-del" data-del="${i.id}">✕</button>
+      </div>`).join("");
+    });
+    box.innerHTML = html;
+
+    box.querySelectorAll(".wallet-item").forEach((row) => {
+      row.addEventListener("click", (e) => {
+        if (e.target.closest("[data-del]")) return;
+        const item = items.find((i) => i.id === row.dataset.id);
+        if (item) openWalletViewer(item);
+      });
+    });
+    box.querySelectorAll("[data-del]").forEach((b) => {
+      b.onclick = async (e) => {
+        e.stopPropagation();
+        if (!confirm("Smazat tuto položku z peněženky?")) return;
+        await Store.remove("wallet", b.dataset.del);
+        renderList();
+      };
+    });
+  }
+  renderList();
+};
 
 Views.nastaveni = async function (el) {
   const shared = Store.isShared();
