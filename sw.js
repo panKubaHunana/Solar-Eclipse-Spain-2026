@@ -1,5 +1,5 @@
 // ECLIPSE — service worker (offline režim)
-const CACHE = "eclipse-v8";
+const CACHE = "eclipse-v9";
 const SHELL = [
   "./",
   "./index.html",

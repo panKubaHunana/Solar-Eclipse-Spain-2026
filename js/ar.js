@@ -29,7 +29,7 @@
   async function open(location) {
     loc = location;
     headingOffset = 0;
-    orient = null; manualMode = false;
+    orient = null; manualMode = false; smoothed = null;
     buildTargets(location);
     render();
     root.classList.add("show");
@@ -118,9 +118,17 @@
     }
   }
 
+  // Na Androidu (Chrome) firing OBOU událostí "deviceorientation" a
+  // "deviceorientationabsolute" pro stejný fyzický pohyb vracelo dvě mírně
+  // odlišné hodnoty azimutu těsně po sobě → viditelné problikávání/skákání
+  // mřížky. Proto se poslouchá jen JEDEN typ události — přesnější
+  // "absolute", pokud ho prohlížeč nabízí.
   function attachOrientListeners() {
-    window.addEventListener("deviceorientationabsolute", onOrient, true);
-    window.addEventListener("deviceorientation", onOrient, true);
+    if ("ondeviceorientationabsolute" in window) {
+      window.addEventListener("deviceorientationabsolute", onOrient, true);
+    } else {
+      window.addEventListener("deviceorientation", onOrient, true);
+    }
   }
 
   async function startCamera() {
@@ -137,19 +145,30 @@
     }
   }
 
+  // Vyhlazení syrového signálu ze senzorů (exponenciální filtr) — bez
+  // něj drobný šum kompasu způsobuje, že se mřížka a značka Slunce chvějí
+  // i při klidně drženém telefonu.
+  let smoothed = null; // {heading, pitch}
+  const SMOOTH = 0.25;
+
   function onOrient(e) {
     let heading = null;
     if (typeof e.webkitCompassHeading === "number") {
       heading = e.webkitCompassHeading;            // iOS: přímo od severu
-    } else if (e.absolute && typeof e.alpha === "number") {
-      heading = (360 - e.alpha) % 360;             // Android absolute
     } else if (typeof e.alpha === "number") {
-      heading = (360 - e.alpha) % 360;
+      heading = (360 - e.alpha) % 360;             // Android
     }
     if (heading == null) return;
     // sklon: telefon svisle (kamera vpřed) → beta ≈ 90; výška = beta - 90
     const pitch = (e.beta != null ? e.beta : 90) - 90;
-    orient = { heading, pitch };
+
+    if (!smoothed) {
+      smoothed = { heading, pitch };
+    } else {
+      smoothed.heading = (smoothed.heading + shortest(heading - smoothed.heading) * SMOOTH + 360) % 360;
+      smoothed.pitch += (pitch - smoothed.pitch) * SMOOTH;
+    }
+    orient = { heading: smoothed.heading, pitch: smoothed.pitch };
     sensorState = "granted";
     updateStatus();
   }
