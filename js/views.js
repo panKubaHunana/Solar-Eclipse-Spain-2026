@@ -72,6 +72,15 @@ Views.home = async function (el) {
       <a class="tile" href="#/plan"><span class="ic">📋</span><span class="t">Plán & vše ostatní</span><span class="d">Checklist, rozpočet, info</span></a>
     </div>
 
+    <a class="card keepsake" href="#/tisk">
+      <span class="ic">🖨️</span>
+      <div>
+        <div class="t">Kronika k tisku</div>
+        <div class="d">Až se vrátíme, vytiskneme celý deník na památku 📖</div>
+      </div>
+      <span class="arr">→</span>
+    </a>
+
     ${UI.quote("Sbaleno a připraveno na vše, co přinese zítřek.")}
   `;
 
@@ -252,6 +261,7 @@ Views.plan = async function (el) {
       <a class="tile" href="#/plan/doprava"><span class="ic">🚗</span><span class="t">Doprava & ubytování</span><span class="d">Lety, auto, kde spíme</span></a>
       <a class="tile" href="#/plan/fakta"><span class="ic">📌</span><span class="t">Základní fakta</span><span class="d">Mise, obavy, co nesmíme minout</span></a>
       <a class="tile" href="#/plan/info"><span class="ic">ℹ️</span><span class="t">Info & bezpečnost</span><span class="d">Tísňová čísla, foto plán, aplikace</span></a>
+      <a class="tile" href="#/tisk"><span class="ic">🖨️</span><span class="t">Kronika k tisku</span><span class="d">Vytisknout deník na památku</span></a>
     </div>
     ${UI.quote("Dobrodružství začíná tam, kde končí tvá komfortní zóna.")}
   `;
@@ -770,6 +780,157 @@ Views.info = async function (el) {
     </div>
     ${UI.quote("Nejkrásnější pohled na svět je ten, který si musíte zasloužit výšlapem.")}
   `;
+};
+
+// =====================================================================
+//  TISK — kompletní kronika k vytištění (památka)
+// =====================================================================
+Views.tisk = async function (el) {
+  const T = window.TRIP;
+  const E = window.ECLIPSE_DATA;
+  const [diary, photos, basics, travel, budget, route, mapkm, eclog] = await Promise.all([
+    Store.list("diary"), Store.list("photos"),
+    Store.getDoc("basics"), Store.getDoc("travelDetails"),
+    Store.getDoc("budget"), Store.getDoc("route"),
+    Store.getDoc("mapkm"), Store.getDoc("eclipseLog")
+  ]);
+
+  const names = window.ECLIPSE_CONFIG.travelers.map((t) => t.name).join(" & ");
+  const fullDate = (ts) => new Date(ts).toLocaleDateString("cs-CZ",
+    { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const num = (v) => parseFloat(String(v).replace(",", ".").replace(/[^\d.]/g, "")) || 0;
+
+  // --- deník (chronologicky) ---
+  const diaryHtml = diary.length ? diary.map((e) => {
+    const a = UI.traveler(e.author);
+    return `<div class="p-entry">
+      <div class="p-entry-head">
+        <span class="p-au" style="color:${a.color}">● ${UI.esc(a.name)}</span>
+        <span>${fullDate(e.ts)}${e.place ? " · " + UI.esc(e.place) : ""} ${e.mood || ""}</span>
+      </div>
+      ${e.image ? `<img class="p-entry-img" src="${e.image}">` : ""}
+      ${e.text ? `<div class="p-entry-text">${UI.esc(e.text)}</div>` : ""}
+    </div>`;
+  }).join("") : `<p class="p-empty">Zatím žádné zápisky — kronika se naplní během cesty.</p>`;
+
+  // --- fotoalbum (i fotky z deníku) ---
+  const allPhotos = photos.concat(
+    diary.filter((d) => d.image).map((d) => ({ image: d.image, caption: d.place || "", author: d.author }))
+  );
+  const albumHtml = allPhotos.length ? `<div class="p-album">` + allPhotos.map((p) =>
+    `<figure class="p-ph"><img src="${p.image}">${p.caption ? `<figcaption>${UI.esc(p.caption)}</figcaption>` : ""}</figure>`
+  ).join("") + `</div>` : `<p class="p-empty">Fotky se doplní během cesty.</p>`;
+
+  // --- rozpočet ---
+  const bRows = (budget.rows && budget.rows.length) ? budget.rows : T.budgetRows;
+  const totEst = bRows.reduce((s, r) => s + num(r.est), 0);
+  const totReal = bRows.reduce((s, r) => s + num(r.real), 0);
+
+  // --- trasa ---
+  const rRows = (route.rows && route.rows.length) ? route.rows : T.route;
+  const totKm = rRows.reduce((s, r) => s + num(r.dist), 0);
+
+  // --- zatmění: počasí + odpovědi ---
+  const wOpt = (id) => (E.weatherOptions.find((o) => o.id === id) || {}).label || "—";
+  const weatherLog = (eclog.weather && Object.keys(eclog.weather).length)
+    ? E.weatherRows.map((t) => `${t} — ${wOpt(eclog.weather[t])}`).join(" · ") : "—";
+  const answers = E.journalQuestions.map((q, i) =>
+    `<div class="p-qa"><b>${UI.esc(q)}</b><div>${UI.esc((eclog.answers && eclog.answers[i]) || "…")}</div></div>`).join("");
+
+  const soria = E.locations[0];
+
+  el.innerHTML = `
+    <div class="no-print" style="text-align:center;margin-bottom:16px">
+      <div class="page-title">Kronika k tisku</div>
+      <p class="install-hint" style="margin:6px 0 14px">
+        Náhled celé kroniky. Klikni na tlačítko a zvol <b>„Uložit jako PDF"</b> (nebo tiskárnu).
+        PDF pak můžeš dát vytisknout jako fotoknihu na památku. 📖
+      </p>
+      <button class="btn gold" id="printBtn">🖨️ Vytisknout / uložit jako PDF</button>
+    </div>
+
+    <div class="print-doc">
+      <!-- Titulní strana -->
+      <section class="p-page p-cover">
+        <img src="assets/cover.jpg" alt="">
+        <div class="p-cover-cap">${UI.esc(names)}<br><small>Cestovatelská kronika</small></div>
+      </section>
+
+      <!-- Základní fakta -->
+      <section class="p-page">
+        <h2 class="p-h">Naše cesta</h2>
+        <table class="p-facts">
+          <tr><th>Datum</th><td>${UI.esc(basics.datum || T.facts.datum)}</td></tr>
+          <tr><th>Lokalita</th><td>${UI.esc(basics.lokalita || T.facts.lokalita)}</td></tr>
+          <tr><th>Mise cesty</th><td>${UI.esc(basics.mise || T.facts.mise)}</td></tr>
+          <tr><th>Nejvíc jsme se těšili</th><td>${UI.esc(basics.tesime || T.facts.tesime)}</td></tr>
+          <tr><th>Doprava</th><td>${UI.esc(travel.doprava || T.transport.doprava)}</td></tr>
+          <tr><th>Ubytování</th><td>${UI.esc(travel.ubytovani || T.transport.ubytovani)}</td></tr>
+        </table>
+      </section>
+
+      <!-- Itinerář -->
+      <section class="p-page">
+        <h2 class="p-h">Itinerář</h2>
+        ${T.days.map((day) => `<div class="p-day">
+          <div class="p-day-h"><b>Den ${day.n} · ${UI.esc(day.date)}</b> — ${UI.esc(day.place)}</div>
+          <div class="p-day-t">${UI.esc(day.title)}</div>
+          <ul class="p-day-items">
+            ${day.items.map((it) => `<li><span>${UI.esc(it.t)}</span> ${UI.esc(it.a)}</li>`).join("")}
+          </ul>
+        </div>`).join("")}
+      </section>
+
+      <!-- Deník -->
+      <section class="p-page">
+        <h2 class="p-h">Deník</h2>
+        ${diaryHtml}
+      </section>
+
+      <!-- Fotoalbum -->
+      <section class="p-page">
+        <h2 class="p-h">Fotoalbum</h2>
+        ${albumHtml}
+      </section>
+
+      <!-- Zatmění -->
+      <section class="p-page">
+        <h2 class="p-h">Úplné zatmění Slunce · 12. 8. 2026</h2>
+        <p class="p-lead">${UI.esc(soria.coords)} — maximální fáze ${soria.maxPhase}</p>
+        <table class="p-facts">
+          ${soria.phases.map((p) => `<tr><th>${UI.esc(p.label)}</th><td>${p.time} · výška ${p.alt}</td></tr>`).join("")}
+        </table>
+        <p class="p-lead" style="margin-top:10px"><b>Počasí:</b> ${weatherLog}</p>
+        <h3 class="p-h3">Deník okamžiku totality</h3>
+        ${answers}
+      </section>
+
+      <!-- Rozpočet & trasa -->
+      <section class="p-page">
+        <h2 class="p-h">Rozpočet</h2>
+        <table class="p-tbl">
+          <tr><th>Kategorie</th><th>Odhad</th><th>Skutečnost</th></tr>
+          ${bRows.map((r) => `<tr><td>${UI.esc(r.cat)}</td><td class="r">${r.est ? num(r.est).toLocaleString("cs-CZ") : "—"}</td><td class="r">${r.real ? num(r.real).toLocaleString("cs-CZ") : "—"}</td></tr>`).join("")}
+          <tr class="tot"><td>Celkem (Kč)</td><td class="r">${totEst.toLocaleString("cs-CZ")}</td><td class="r">${totReal ? totReal.toLocaleString("cs-CZ") : "—"}</td></tr>
+        </table>
+        <h2 class="p-h" style="margin-top:16px">Trasa</h2>
+        <table class="p-tbl">
+          <tr><th>Den</th><th>Odkud–kam</th><th>Prostředek</th><th>km</th></tr>
+          ${rRows.map((r) => `<tr><td>${UI.esc(r.day || "")}</td><td>${UI.esc(r.fromto || "")}</td><td>${UI.esc(r.mode || "")}</td><td class="r">${UI.esc(r.dist || "")}</td></tr>`).join("")}
+          <tr class="tot"><td colspan="3">Celkem</td><td class="r">${totKm ? totKm.toLocaleString("cs-CZ") + " km" : "—"}</td></tr>
+        </table>
+      </section>
+
+      <!-- Závěr -->
+      <section class="p-page p-end">
+        <div class="p-end-ring"></div>
+        <p class="p-end-q">„Cesty nejsou jen o kilometrech,<br>ale o momentech, které si pamatuješ."</p>
+        <p class="p-end-sig">${UI.esc(names)} · Španělsko 2026</p>
+      </section>
+    </div>
+  `;
+
+  el.querySelector("#printBtn").onclick = () => window.print();
 };
 
 window.Views = Views;

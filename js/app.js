@@ -141,6 +141,7 @@ const ROUTES = {
   "plan/mapa": { view: "mapa", tab: "plan" },
   "plan/checklist": { view: "checklist", tab: "plan" },
   "plan/info": { view: "info", tab: "plan" },
+  "tisk": { view: "tisk", tab: "plan" },
   "zatmeni": { view: "zatmeni", tab: "zatmeni" }
 };
 

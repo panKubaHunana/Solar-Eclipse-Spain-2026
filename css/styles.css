@@ -607,6 +607,87 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--gold-2); ou
 .linkrow { display: block; padding: 10px 0; border-bottom: 1px dashed var(--line); color: var(--gold); text-decoration: none; font-weight: 600; font-size: 14px; }
 .linkrow:last-child { border-bottom: none; }
 
+/* ---- Keepsake karta (Domů) --------------------------------------- */
+.keepsake { display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--ink); margin-top: 16px; }
+.keepsake .ic { font-size: 30px; }
+.keepsake .t { font-weight: 800; font-size: 16px; }
+.keepsake .d { font-size: 12.5px; color: var(--ink-2); }
+.keepsake .arr { margin-left: auto; color: var(--gold); font-size: 20px; font-weight: 800; }
+
+/* ---- Kronika k tisku (náhled) ------------------------------------ */
+.print-doc { display: flex; flex-direction: column; gap: 18px; }
+.p-page {
+  background: #faf4e6; border: 1px solid var(--line); border-radius: 8px;
+  padding: 22px; box-shadow: var(--shadow); color: #201d16;
+}
+.p-h { font-size: 21px; letter-spacing: 0.02em; border-bottom: 2px solid var(--gold); padding-bottom: 6px; margin-bottom: 12px; }
+.p-h3 { font-size: 15px; margin: 12px 0 6px; color: var(--terra); }
+.p-lead { font-size: 13.5px; color: var(--ink-2); }
+.p-empty { font-style: italic; color: var(--ink-2); font-family: var(--serif); }
+
+.p-cover { padding: 0; overflow: hidden; position: relative; text-align: center; }
+.p-cover img { width: 100%; display: block; }
+.p-cover-cap {
+  font-family: var(--serif); font-size: 20px; padding: 16px; color: var(--ink);
+  border-top: 1px solid var(--line);
+}
+.p-cover-cap small { font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-2); }
+
+.p-facts { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.p-facts th { text-align: left; width: 38%; vertical-align: top; padding: 7px 10px 7px 0; color: var(--ink-2); font-weight: 700; border-bottom: 1px solid var(--line); }
+.p-facts td { padding: 7px 0; border-bottom: 1px solid var(--line); }
+
+.p-day { margin-bottom: 12px; break-inside: avoid; }
+.p-day-h { font-size: 14px; }
+.p-day-t { font-size: 13px; color: var(--terra); margin: 1px 0 4px; }
+.p-day-items { list-style: none; margin: 0; padding: 0; font-size: 12.5px; }
+.p-day-items li { padding: 2px 0; }
+.p-day-items li span { display: inline-block; min-width: 46px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+.p-entry { break-inside: avoid; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px dashed var(--line); }
+.p-entry-head { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--ink-2); margin-bottom: 6px; flex-wrap: wrap; }
+.p-au { font-weight: 800; }
+.p-entry-img { width: 100%; max-height: 340px; object-fit: cover; border-radius: 6px; margin-bottom: 8px; }
+.p-entry-text { font-size: 14px; line-height: 1.55; white-space: pre-wrap; }
+
+.p-album { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.p-ph { margin: 0; break-inside: avoid; }
+.p-ph img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); }
+.p-ph figcaption { font-size: 11.5px; color: var(--ink-2); margin-top: 3px; text-align: center; }
+
+.p-qa { font-size: 13px; margin-bottom: 8px; break-inside: avoid; }
+.p-qa b { color: var(--ink); }
+.p-qa div { color: var(--ink-2); font-family: var(--serif); font-style: italic; }
+
+.p-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.p-tbl th { text-align: left; border-bottom: 1.5px solid var(--line-2); padding: 6px 4px; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); }
+.p-tbl td { padding: 5px 4px; border-bottom: 1px solid var(--line); }
+.p-tbl td.r, .p-tbl th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.p-tbl tr.tot td { font-weight: 800; border-top: 1.5px solid var(--line-2); border-bottom: none; }
+
+.p-end { text-align: center; padding: 40px 22px; }
+.p-end-ring { width: 90px; height: 90px; border-radius: 50%; margin: 0 auto 18px; background: #faf4e6;
+  box-shadow: 0 0 0 5px #201d16, 0 0 22px 6px rgba(32,29,22,0.5); }
+.p-end-q { font-family: var(--serif); font-style: italic; font-size: 18px; line-height: 1.5; }
+.p-end-sig { font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-2); margin-top: 20px; }
+
+/* ---- Tisk -------------------------------------------------------- */
+@media print {
+  @page { size: A4; margin: 12mm; }
+  html, body { background: #fff !important; }
+  .topbar, #ticker, .tabbar, .no-print, .toast { display: none !important; }
+  #app { box-shadow: none !important; max-width: none !important; background: #fff !important; }
+  #app::before { display: none !important; }
+  main { padding: 0 !important; }
+  .view { animation: none !important; }
+  .print-doc { gap: 0; }
+  .p-page { break-after: page; border: none !important; box-shadow: none !important; border-radius: 0; padding: 0; background: #fff !important; }
+  .p-page:last-child { break-after: auto; }
+  .p-cover { height: 96vh; display: flex; flex-direction: column; justify-content: center; }
+  .p-entry, .p-day, .p-ph, .p-qa { break-inside: avoid; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}
+
 /* ---- Toast ------------------------------------------------------- */
 .toast {
   position: fixed; left: 50%; bottom: 92px; transform: translateX(-50%) translateY(20px);
