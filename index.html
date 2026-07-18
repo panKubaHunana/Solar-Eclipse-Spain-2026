@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <title>ECLIPSE — Solar Eclipse Spain 2026</title>
+  <meta name="description" content="Cestovatelská kronika Jakuba a Honzy — roadtrip za úplným zatměním Slunce, Španělsko 2026.">
+  <meta name="theme-color" content="#1e2530">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ECLIPSE">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/favicon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="assets/icon-180.jpg">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <span class="wm">ECLIPSE</span>
+      <span class="spacer"></span>
+      <span class="sync-pill" id="sync"><span class="d"></span><span class="txt">…</span></span>
+      <button class="who" id="who">…</button>
+    </header>
+
+    <div class="ticker" id="ticker"></div>
+
+    <main id="view"></main>
+
+    <nav class="tabbar">
+      <a href="#/" data-tab="home"><span class="ic">🏠</span>Domů</a>
+      <a href="#/denik" data-tab="denik"><span class="ic">📖</span>Deník</a>
+      <a href="#/fotky" data-tab="fotky"><span class="ic">📸</span>Fotky</a>
+      <a href="#/plan" data-tab="plan"><span class="ic">📋</span>Plán</a>
+      <a href="#/zatmeni" data-tab="zatmeni"><span class="ic">🌒</span>Zatmění</a>
+    </nav>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/sun.js"></script>
+  <script src="js/weather.js"></script>
+  <script src="js/eclipse.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/ar.js"></script>
+  <script src="js/views.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
