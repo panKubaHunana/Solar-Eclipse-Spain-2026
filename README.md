@@ -60,6 +60,30 @@ vše se nastaví přímo v aplikaci:
 > a doděláme. Alternativně jde vyplnit `SUPABASE_URL`/`SUPABASE_ANON_KEY` v
 > `js/config.js`.
 
+## 📱 QR Generátor (samostatná appka)
+
+Ve složce `qr/` je druhá, zcela nezávislá PWA appka — jednoduchý generátor QR
+kódů, offline a bez sledování:
+
+- **Typy kódů:** text, odkaz (URL), Wi-Fi (SSID + heslo + zabezpečení),
+  kontakt (vCard), e-mail, SMS, telefonní číslo, kalendářní událost.
+- **Vzhled:** vlastní barva kódu i pozadí, úroveň korekce chyb (L/M/Q/H)
+  a volitelné **logo/obrázek uprostřed** kódu (korekce chyb se pak
+  automaticky přepne na nejvyšší, aby kód zůstal čitelný).
+- **Stažení / sdílení:** tlačítko *Stáhnout* uloží PNG do telefonu,
+  *Sdílet* otevře systémové sdílení (WhatsApp, AirDrop, e-mail…),
+  *Kopírovat obrázek* dá QR kód rovnou do schránky.
+- **Historie** posledních kódů se ukládá jen lokálně v telefonu.
+- Instaluje se na plochu stejně jako appka ECLIPSE (**„Přidat na plochu"**)
+  a funguje kompletně offline — žádná data neopouští zařízení.
+
+Nasazení: v **Settings → Pages** stačí stejná větev, appka běží na
+`https://<uživatel>.github.io/solar-eclipse-spain-2026/qr/`.
+
+Zdrojový QR encoder je vendorovaná knihovna
+[qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator)
+(MIT, Kazuhiko Arase) v `qr/js/qrcode-lib.js`.
+
 ## Technika
 
 - Vanilla JS, bez build kroku. Service worker (`sw.js`) pro offline.
@@ -85,4 +109,5 @@ js/ar.js              AR hledáček Slunce
 js/views.js           obrazovky
 js/app.js             router, odpočet, shell
 assets/               titulní obrázek + ikony
+qr/                   samostatná PWA appka — QR Generátor (viz sekce výše)
 ```
