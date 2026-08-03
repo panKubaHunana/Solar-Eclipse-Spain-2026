@@ -84,6 +84,78 @@ Zdrojový QR encoder je vendorovaná knihovna
 [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator)
 (MIT, Kazuhiko Arase) v `qr/js/qrcode-lib.js`.
 
+## ⏰ Hodinové cinknutí (samostatná appka + push server)
+
+Ve složce `timer/` je třetí, opět zcela nezávislá PWA appka — kuchyňská
+minutka:
+
+- **Klasický odpočet** — vyber přednastavený čas (1/5/10/15/30 min) nebo
+  vlastní počet minut, appka odpočítává a na konci cinkne (zvuk + vibrace
+  + notifikace). Funguje čistě lokálně, appka ale musí zůstat otevřená.
+- **Hodinové cinknutí** — navíc umí jednou za hodinu poslat cinknutí
+  **i když je appka zavřená a telefon zamčený**. Prohlížeče to bez
+  serveru neumí (neexistuje způsob, jak appce naplánovat opakovanou
+  notifikaci sama v telefonu), proto appka posílá skutečnou **push
+  notifikaci** přes malý server. Bez nastaveného serveru appka funguje
+  jen jako běžná minutka.
+- **Tichá noc** — volitelně appka mezi zvoleným rozmezím (výchozí
+  23:00–07:00) hodinové cinknutí přeskočí, ať tě nebudí přes noc.
+
+### 1) Appka samotná
+
+Stejně jako appky výše — stačí stejná GitHub Pages větev, appka poběží na
+`https://<uživatel>.github.io/solar-eclipse-spain-2026/timer/`.
+
+### 2) Push server (jednorázové nastavení, ~10 minut)
+
+Server je zdarma [Cloudflare Worker](https://workers.cloudflare.com) ve
+složce `timer/push-server/`. Potřebuješ na počítači nainstalovaný
+[Node.js](https://nodejs.org) a zdarma účet na
+[cloudflare.com](https://cloudflare.com) (bez platební karty).
+
+```bash
+cd timer/push-server
+npm install
+npx wrangler login                       # přihlásí tě přes prohlížeč
+
+npx wrangler kv namespace create SUBS     # vypíše "id" — vlož ho do
+                                           # wrangler.toml místo
+                                           # REPLACE_WITH_KV_ID
+
+npx web-push generate-vapid-keys          # vypíše Public/Private Key
+```
+
+Vygenerovaný **Public Key** vlož na dvě místa:
+- `timer/push-server/wrangler.toml` → `VAPID_PUBLIC_KEY`
+- `timer/js/config.js` → `VAPID_PUBLIC_KEY`
+
+**Private Key** (tajný, nikam do repozitáře) nastav jako serverový secret:
+
+```bash
+npx wrangler secret put VAPID_PRIVATE_KEY   # appka se zeptá na hodnotu, vlož Private Key
+
+npx wrangler deploy                         # nasadí server, vypíše jeho adresu
+                                             # (https://hourly-chime.<účet>.workers.dev)
+```
+
+Vypsanou adresu vlož do `timer/js/config.js` → `PUSH_SERVER_URL`, ulož a
+`git push` (appka se sama znovu nasadí na GitHub Pages).
+
+### 3) Zapnutí v appce
+
+V appce `timer/` zapni přepínač **„Hodinové cinknutí"**, telefon se
+zeptá na povolení notifikací — potvrď. Hotovo, tenhle telefon bude
+každou celou hodinu cinkat, i zamčený.
+
+> **iPhone/Safari:** appku je potřeba nejdřív přidat na plochu
+> (**„Přidat na plochu"**) a otevřít ji odtud — teprve pak jde v appce
+> povolit notifikace (funguje od iOS 16.4). V běžné kartě Safari
+> notifikace nefungují.
+>
+> Server si u sebe uchovává jen technickou adresu, na kterou mu
+> prohlížeč řekne doručovat zprávy (tzv. push endpoint), a nastavení
+> tiché noci — žádné jiné osobní údaje.
+
 ## Technika
 
 - Vanilla JS, bez build kroku. Service worker (`sw.js`) pro offline.
@@ -110,4 +182,6 @@ js/views.js           obrazovky
 js/app.js             router, odpočet, shell
 assets/               titulní obrázek + ikony
 qr/                   samostatná PWA appka — QR Generátor (viz sekce výše)
+timer/                samostatná PWA appka — Hodinové cinknutí (viz sekce výše)
+  push-server/         Cloudflare Worker — posílá hodinovou push notifikaci
 ```

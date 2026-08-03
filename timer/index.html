@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <title>Hodinové cinknutí</title>
+  <meta name="description" content="Kuchyňská minutka, která ti jednou za hodinu cinkne — i na zamčeném telefonu.">
+  <meta name="theme-color" content="#151a12">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cinknutí">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/favicon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="assets/icon-180.png">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <span class="brand">🔔 Hodinové cinknutí</span>
+      <span class="spacer"></span>
+      <span class="offline-pill" id="offlinePill"><span class="d"></span><span class="txt">…</span></span>
+    </header>
+
+    <main class="wrap">
+
+      <section class="card clock-card">
+        <div class="clock" id="clock">--:--</div>
+        <div class="next-chime" id="nextChime">Zjišťuju čas do dalšího cinknutí…</div>
+      </section>
+
+      <section class="card">
+        <h2>Cinkat každou celou hodinu</h2>
+        <p class="hint">Zapnutím appka požádá o povolení notifikací a přihlásí tento telefon k odběru.
+          Funguje i se zamčeným telefonem a zavřenou appkou.</p>
+
+        <label class="switch-row">
+          <span>Hodinové cinknutí</span>
+          <span class="switch">
+            <input type="checkbox" id="toggleHourly" disabled>
+            <span class="slider"></span>
+          </span>
+        </label>
+
+        <p class="status-line" id="hourlyStatus">…</p>
+
+        <div class="field-row quiet-row" id="quietRow">
+          <label class="switch-row small">
+            <span>Tichá noc (necinkat)</span>
+            <span class="switch">
+              <input type="checkbox" id="toggleQuiet" checked>
+              <span class="slider"></span>
+            </span>
+          </label>
+          <div class="quiet-times" id="quietTimes">
+            <label class="field small">
+              <span>Od</span>
+              <input type="time" id="quietFrom" value="23:00">
+            </label>
+            <label class="field small">
+              <span>Do</span>
+              <input type="time" id="quietTo" value="07:00">
+            </label>
+          </div>
+        </div>
+
+        <button type="button" class="btn ghost" id="btnTest">🔊 Vyzkoušet cinknutí teď</button>
+      </section>
+
+      <section class="card">
+        <h2>⏱️ Kuchyňská minutka</h2>
+        <p class="hint">Klasický odpočet — nastav minuty a appka tě upozorní, až vyprší (appka musí zůstat otevřená).</p>
+
+        <div class="timer-display" id="timerDisplay">00:00</div>
+
+        <div class="presets" id="presets">
+          <button type="button" class="chip" data-min="1">1 min</button>
+          <button type="button" class="chip" data-min="5">5 min</button>
+          <button type="button" class="chip" data-min="10">10 min</button>
+          <button type="button" class="chip" data-min="15">15 min</button>
+          <button type="button" class="chip" data-min="30">30 min</button>
+        </div>
+
+        <div class="field-row">
+          <label class="field">
+            <span>Vlastní čas (minuty)</span>
+            <input type="number" id="customMinutes" min="1" max="180" value="10" inputmode="numeric">
+          </label>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btnStart">▶️ Start</button>
+          <button type="button" class="btn" id="btnPause" disabled>⏸️ Pauza</button>
+          <button type="button" class="btn ghost" id="btnReset" disabled>↺ Reset</button>
+        </div>
+      </section>
+
+      <p class="toast" id="toast" role="status" aria-live="polite"></p>
+    </main>
+
+    <footer class="foot">
+      <p>Hodinové cinknutí běží přes push notifikace — nic z appky se nikam neposílá kromě
+        tohoto přihlášení k odběru. Vše ostatní (minutka) běží čistě v telefonu.</p>
+    </footer>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+# Zkopíruj do .dev.vars (bez .example) pro lokální testování přes `wrangler dev`.
+# Do produkce se soukromý klíč nastavuje přes:
+#   npx wrangler secret put VAPID_PRIVATE_KEY
+VAPID_PRIVATE_KEY=REPLACE_WITH_VAPID_PRIVATE_KEY

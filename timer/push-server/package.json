@@ -1,0 +1,17 @@
+{
+  "name": "hourly-chime-push-server",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Cloudflare Worker — posílá Web Push notifikaci každou celou hodinu appce Hodinové cinknutí.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  },
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}
